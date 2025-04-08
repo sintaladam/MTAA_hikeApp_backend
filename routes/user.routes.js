@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from '../config/db.js';
+import jwt from 'jsonwebtoken';
 
 const userRouter = Router();
 
