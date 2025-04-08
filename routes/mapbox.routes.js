@@ -1,5 +1,5 @@
 import { Router } from "express";
-import pool from '../config/db.js';
+import pool from '../db.js';
 import dotenv from 'dotenv';
 
 import axios from 'axios';
