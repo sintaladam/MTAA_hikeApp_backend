@@ -1,5 +1,6 @@
 /* Replace with your SQL commands */
 
+
 -- Drop all tables in reverse order of creation
 DROP TABLE IF EXISTS hike_schema.location_shares;
 DROP TABLE IF EXISTS communication_schema.notification_recipients;
@@ -12,9 +13,3 @@ DROP TABLE IF EXISTS hike_schema.hike_points;
 DROP TABLE IF EXISTS hike_schema.hikes;
 DROP TABLE IF EXISTS user_schema.friendships;
 DROP TABLE IF EXISTS user_schema.users;
-
--- Drop schemas after tables
-DROP SCHEMA IF EXISTS user_schema;
-DROP SCHEMA IF EXISTS hike_schema;
-DROP SCHEMA IF EXISTS communication_schema;
-DROP SCHEMA IF EXISTS config_schema;
