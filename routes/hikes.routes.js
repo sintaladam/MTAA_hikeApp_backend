@@ -3,6 +3,7 @@ import pool from '../db.js';
 import pkg from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import CustomError from '../utils/CustomError.js';
 
 const hikeRouter = Router();
 
@@ -18,7 +19,7 @@ hikeRouter.post('/add',async (req,res) => {
         res.status(200).json({"response": name,user_id})
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Internal server error' });    
+        next(new CustomError('Internal server error', 500));    
     }
 })
 
@@ -32,7 +33,7 @@ hikeRouter.get('/from-user', async (req,res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Internal server error' }); 
+        next(new CustomError('Internal server error', 500));    
     }
 })
 
