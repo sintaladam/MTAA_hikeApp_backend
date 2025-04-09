@@ -4,6 +4,7 @@ import pkg from 'firebase-admin';
 import serviceAccount from '../firebase.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import CustomError from '../middleware/customError.js';
 
 dotenv.config();
 const admin = pkg;
@@ -17,7 +18,7 @@ function generateToken(payload) {
   });
 }
 
-authRouter.post('/signup', async (req, res) => {
+authRouter.post('/signup', async (req, res, next) => {
   const {
     name,
     email,
@@ -31,6 +32,16 @@ authRouter.post('/signup', async (req, res) => {
   } = req.body;
 
   try {
+    // basic validation example
+    if (!email || !password) {
+      throw new CustomError('Email and password are required', 400);
+    }
+
+    // basic email format check thing i tried
+    if (!email.includes('@') || !email.includes('.')) {
+      throw new CustomError('Invalid email format', 422);
+    }
+
     const userRecord = await admin.auth().createUser({ email, password });
     const created_at = new Date().toISOString();
 
@@ -53,9 +64,15 @@ authRouter.post('/signup', async (req, res) => {
       token,
       user
     });
+
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(400).json({ error: error.message });
+    // if it's already a custom error, just forward it
+    if (error instanceof CustomError) {
+      return next(error);
+    }
+
+    console.error('Unexpected error:', error);
+    next(new CustomError('Error creating user', 500));
   }
 });
 
