@@ -1,5 +1,5 @@
 import { Router } from "express";
-import pool from '../config/db.js';
+import pool from '../db.js';
 import pkg from 'firebase-admin';
 import serviceAccount from '../firebase.js';
 import jwt from 'jsonwebtoken';
@@ -35,7 +35,7 @@ authRouter.post('/signup', async (req, res) => {
     const created_at = new Date().toISOString();
 
     const result = await pool.query(
-      'INSERT INTO users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, role',
+      'INSERT INTO user_schema.users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, role',
       [name, role, nickname, profile_picture, email, surname, created_at, birth_date, region]
     );
 
