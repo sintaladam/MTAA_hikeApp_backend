@@ -2,10 +2,7 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-
-// This import is currently unused, so we might consider removing it later
-// if we don’t end up storing any map data or queries in the DB.
-// import pool from '../db.js';
+import pool from '../config/db.js';
 
 dotenv.config();
 
@@ -17,7 +14,6 @@ mapboxRouter.get('/search', async (req, res, next) => {
   const { query } = req.query;
 
   if (!query) {
-    // Custom error handling to match the rest of the app
     return next(new CustomError('Query parameter is required', 400));
   }
 
@@ -29,6 +25,29 @@ mapboxRouter.get('/search', async (req, res, next) => {
   } catch (error) {
     console.error('Mapbox Error:', error.message);
     next(new CustomError('Failed to fetch from Mapbox', 500));
+  }
+});
+
+// add a waypoint
+mapboxRouter.post('/waypoints', async (req, res, next) => {
+  const { hike_id, latitude, longitude } = req.body;
+
+  if (!hike_id || !latitude || !longitude) {
+    return next(new CustomError('hike_id, latitude and longitude are required', 400));
+  }
+
+  try {
+    const created_at = new Date().toISOString();
+    const result = await pool.query(
+      `INSERT INTO hike_points (hike_id, latitude, longitude, created_at)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [hike_id, latitude, longitude, created_at]
+    );
+
+    res.status(201).json({ message: 'Waypoint added successfully', waypoint: result.rows[0] });
+  } catch (error) {
+    console.error('DB Error:', error.message);
+    next(new CustomError('Failed to add waypoint', 500));
   }
 });
 
