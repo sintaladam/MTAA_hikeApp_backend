@@ -28,26 +28,63 @@ mapboxRouter.get('/search', async (req, res, next) => {
   }
 });
 
-// add a waypoint
-mapboxRouter.post('/waypoints', async (req, res, next) => {
-  const { hike_id, latitude, longitude } = req.body;
+// update an existing hikes waypoints
+mapboxRouter.put('/waypoints', async (req, res, next) => {
+  const { hike_id, updates } = req.body;
 
-  if (!hike_id || !latitude || !longitude) {
-    return next(new CustomError('hike_id, latitude and longitude are required', 400));
+  if (!hike_id || !Array.isArray(updates)) {
+    return next(new CustomError('hike_id and updates array are required', 400));
   }
 
   try {
-    const created_at = new Date().toISOString();
-    const result = await pool.query(
-      `INSERT INTO hike_points (hike_id, latitude, longitude, created_at)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [hike_id, latitude, longitude, created_at]
-    );
+    const hikeExists = await pool.query(`SELECT 1 FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
+    if (hikeExists.rowCount === 0) {
+      return next(new CustomError('Hike not found', 404));
+    }
 
-    res.status(201).json({ message: 'Waypoint added successfully', waypoint: result.rows[0] });
+    const results = [];
+    const created_at = new Date().toISOString();
+
+    for (const item of updates) {
+      const { type, id, latitude, longitude, order_number } = item;
+
+      if (!type) continue;
+
+      if (type === 'insert') {
+        if (latitude == null || longitude == null || order_number == null) continue;
+
+        const insert = await pool.query(
+          `INSERT INTO hike_points (hike_id, order_number, latitude, longitude, created_at)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [hike_id, order_number, latitude, longitude, created_at]
+        );
+        results.push({ type: 'insert', data: insert.rows[0] });
+
+      } else if (type === 'update') {
+        if (!id || latitude == null || longitude == null) continue;
+
+        const update = await pool.query(
+          `UPDATE hike_points SET latitude = $1, longitude = $2 WHERE id = $3 RETURNING *`,
+          [latitude, longitude, id]
+        );
+        results.push({ type: 'update', data: update.rows[0] });
+
+      } else if (type === 'delete') {
+        if (!id) continue;
+
+        const del = await pool.query(
+          `DELETE FROM hike_points WHERE id = $1 RETURNING *`,
+          [id]
+        );
+        results.push({ type: 'delete', data: del.rows[0] });
+      }
+    }
+
+    res.status(200).json({ message: 'Waypoint operations completed', results });
+
   } catch (error) {
     console.error('DB Error:', error.message);
-    next(new CustomError('Failed to add waypoint', 500));
+    next(new CustomError('Failed to update waypoints', 500));
   }
 });
 
