@@ -25,7 +25,7 @@ CREATE TABLE user_schema.friendships (
 -- Create hikes table
 CREATE TABLE hike_schema.hikes (
  id SERIAL PRIMARY KEY,
- name VARCHAR(100),
+ name VARCHAR(100) UNIQUE,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  user_id INTEGER REFERENCES user_schema.users(id)
 );
