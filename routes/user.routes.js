@@ -1,6 +1,6 @@
 import { Router } from "express";
 import pool from '../db.js';
-import CustomError from '../utils/CustomError.js';
+import CustomError from '../middleware/customError.js';
 import jwt from 'jsonwebtoken';
 
 const userRouter = Router();

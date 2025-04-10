@@ -6,7 +6,7 @@
   "experimentalImportJson": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate:create": "db-migrate create table_create -e dev --sql-file",
+    "migrate:create": "db-migrate create added -e dev --sql-file",
     "migrate:up": "db-migrate up -e dev",
     "migrate:down": "db-migrate down -e dev"
   },

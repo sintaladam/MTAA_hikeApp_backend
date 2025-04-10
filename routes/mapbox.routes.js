@@ -1,7 +1,7 @@
 import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
-import CustomError from '../utils/CustomError.js';
+import CustomError from '../middleware/customError.js';
 
 // This import is currently unused, so we might consider removing it later
 // if we don’t end up storing any map data or queries in the DB.
