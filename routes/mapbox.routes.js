@@ -2,7 +2,7 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-import pool from '../config/db.js';
+import pool from '../db.js';
 
 dotenv.config();
 
@@ -54,7 +54,7 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
         if (latitude == null || longitude == null || order_number == null) continue;
 
         const insert = await pool.query(
-          `INSERT INTO hike_points (hike_id, order_number, latitude, longitude, created_at)
+          `INSERT INTO hike_schema.hike_points (hike_id, order_number, latitude, longitude, created_at)
            VALUES ($1, $2, $3, $4, $5) RETURNING *`,
           [hike_id, order_number, latitude, longitude, created_at]
         );
@@ -64,7 +64,7 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
         if (!id || latitude == null || longitude == null) continue;
 
         const update = await pool.query(
-          `UPDATE hike_points SET latitude = $1, longitude = $2 WHERE id = $3 RETURNING *`,
+          `UPDATE hike_schema.hike_points SET latitude = $1, longitude = $2 WHERE id = $3 RETURNING *`,
           [latitude, longitude, id]
         );
         results.push({ type: 'update', data: update.rows[0] });
@@ -73,14 +73,35 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
         if (!id) continue;
 
         const del = await pool.query(
-          `DELETE FROM hike_points WHERE id = $1 RETURNING *`,
+          `DELETE FROM hike_schema.hike_points WHERE id = $1 RETURNING *`,
           [id]
         );
         results.push({ type: 'delete', data: del.rows[0] });
       }
     }
 
-    res.status(200).json({ message: 'Waypoint operations completed', results });
+    // fetch updated hike data
+    const hikeQuery = await pool.query(
+      `SELECT * FROM hike_schema.hikes WHERE id = $1`,
+      [hike_id]
+    );
+    const hike = hikeQuery.rows[0];
+
+    // fetch updated waypoints
+    const pointsQuery = await pool.query(
+      `SELECT * FROM hike_schema.hike_points WHERE hike_id = $1 ORDER BY order_number ASC`,
+      [hike_id]
+    );
+    const waypoints = pointsQuery.rows;
+
+    res.status(200).json({
+      message: 'Waypoint operations completed',
+      hike: {
+        ...hike,
+        waypoints
+      }
+    });
+
 
   } catch (error) {
     console.error('DB Error:', error.message);

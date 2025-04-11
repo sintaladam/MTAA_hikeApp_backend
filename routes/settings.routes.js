@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import pool from '../config/db.js';
+import pool from '../db.js';
 import CustomError from '../middleware/customError.js';
 
 const settingsRouter = Router();
