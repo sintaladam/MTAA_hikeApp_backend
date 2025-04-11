@@ -2,7 +2,9 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-import pool from '../config/db.js';
+import pool from '../db.js';
+
+//directions api https://api.mapbox.com/directions/v5/mapbox/walking/
 
 dotenv.config();
 
@@ -24,6 +26,27 @@ mapboxRouter.get('/search', async (req, res, next) => {
     res.json(response.data);
   } catch (error) {
     console.error('Mapbox Error:', error.message);
+    next(new CustomError('Failed to fetch from Mapbox', 500));
+  }
+});
+
+
+mapboxRouter.get('/testing', async (req, res, next) => {
+  try {
+    // Properly format coordinates for Mapbox Directions API
+    const coordinates = req.body.coord1 + ';'+ req.body.coord2;
+    
+    // Create the URL with proper format
+    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?access_token=${MAPBOX_TOKEN}&geometries=geojson&overview=full`;
+    
+    // Make the actual API call
+    const response = await axios.get(url);
+    res.json(response.data);
+    
+    // For debugging only, uncomment to see the URL
+    // res.json({url});
+  } catch (error) {
+    console.error('Mapbox Error:', error);
     next(new CustomError('Failed to fetch from Mapbox', 500));
   }
 });

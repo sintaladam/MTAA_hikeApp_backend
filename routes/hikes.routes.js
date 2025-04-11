@@ -50,7 +50,7 @@ hikeRouter.get('/from-user', async (req,res) => {
         const userId = req.query.id;
 
         let query = await pool.query(`
-        SELECT hike.name,hike.created_at,hike.user_id,creator.nickname 
+        SELECT hike.id,hike.name,hike.created_at,hike.user_id,creator.nickname 
         FROM hike_schema.hikes hike 
         JOIN user_schema.users creator 
         ON hike.user_id = creator.id
@@ -67,7 +67,7 @@ hikeRouter.get('/from-user', async (req,res) => {
 
 hikeRouter.get('/from-user-detail', async (req,res) => {
     try {
-        const userId = req.query.id;
+        const {userId, hikeId} = req.query;
 
         let query = await pool.query(`
         SELECT hike.*,creator.nickname 
@@ -75,8 +75,9 @@ hikeRouter.get('/from-user-detail', async (req,res) => {
         JOIN user_schema.users creator 
         ON hike.user_id = creator.id
         WHERE user_id = $1
-        `, [userId]);
-
+        AND hike.id = $2;
+        `, [userId, hikeId]);
+        console.log(userId,hikeId);
         res.status(200).json(query.rows); 
 
     } catch (err) {
