@@ -7,7 +7,7 @@ import CustomError from '../middleware/customError.js';
 
 const hikeRouter = Router();
 
-hikeRouter.post('/add',async (req,res) => {
+hikeRouter.post('/add',async (req,res,next) => {
     try {
         const {name, user_id} = req.body;
         const array = req.body.points;
