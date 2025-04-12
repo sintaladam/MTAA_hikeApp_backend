@@ -9,6 +9,7 @@ import mapboxRouter from './routes/mapbox.routes.js';
 import hikeRouter from './routes/hikes.routes.js';
 import errorHandler from './middleware/errorHandler.js';
 import settingsRouter from './routes/settings.routes.js';
+import friendRouter from './routes/friends.routes.js';
 
 const PORT = process.env.SERVER_PORT;
 const app = express();
@@ -20,6 +21,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/mapbox', mapboxRouter);
 app.use('/api/hikes', hikeRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/friends', friendRouter);
 
 app.use('/',async (req,res) => res.status(200).send('Welcome to our HikeApi'));
 

@@ -9,7 +9,7 @@
     "migrate:create": "db-migrate create added -e dev --sql-file",
     "migrate:up": "db-migrate up -e dev table_create",
     "migrate:down": "db-migrate down -e dev table_create",
-    "migrate:status":"db-migrate status"
+    "migrate:status": "db-migrate status"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +24,7 @@
     "db-migrate-pg": "^1.5.2",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-validator": "^7.2.1",
     "firebase": "^11.5.0",
     "firebase-admin": "^13.2.0",
     "firebase-auth": "^0.1.2",
