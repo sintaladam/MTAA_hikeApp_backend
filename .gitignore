@@ -2,3 +2,4 @@ api_key/
 node_modules/
 .env
 utils/service_account
+utils/firebase.js
