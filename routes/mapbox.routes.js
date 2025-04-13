@@ -2,9 +2,8 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-import pool from '../utils/db.js';
-
-//directions api https://api.mapbox.com/directions/v5/mapbox/walking/
+import pool from '../db.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 dotenv.config();
 
@@ -30,7 +29,7 @@ mapboxRouter.get('/search', async (req, res, next) => {
   }
 });
 
-mapboxRouter.put('/waypoints', async (req, res, next) => {
+mapboxRouter.put('/waypoints', authenticateToken, async (req, res, next) => {
   const { hike_id, updates } = req.body;
 
   if (!hike_id || !Array.isArray(updates)) {
@@ -38,9 +37,14 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
   }
 
   try {
-    const hikeExists = await pool.query(`SELECT 1 FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
+    const hikeExists = await pool.query(`SELECT * FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
     if (hikeExists.rowCount === 0) {
       return next(new CustomError('Hike not found', 404));
+    }
+
+    const hike = hikeExists.rows[0];
+    if (hike.user_id !== req.user.id) {
+      return next(new CustomError('Unauthorized: not your hike', 403));
     }
 
     for (const item of updates) {
@@ -65,7 +69,10 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
       } else if (type === 'update') {
         if (!id || latitude == null || longitude == null || order_number == null) continue;
 
-        const current = await pool.query(`SELECT order_number FROM hike_schema.hike_points WHERE id = $1`, [id]);
+        const current = await pool.query(
+          `SELECT order_number FROM hike_schema.hike_points WHERE id = $1 AND hike_id = $2`,
+          [id, hike_id]
+        );
         if (current.rowCount === 0) continue;
 
         const currentOrder = current.rows[0].order_number;
@@ -89,16 +96,16 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
         await pool.query(
           `UPDATE hike_schema.hike_points
            SET latitude = $1, longitude = $2, order_number = $3
-           WHERE id = $4`,
-          [latitude, longitude, order_number, id]
+           WHERE id = $4 AND hike_id = $5`,
+          [latitude, longitude, order_number, id, hike_id]
         );
 
       } else if (type === 'delete') {
         if (!id) continue;
 
         const deleted = await pool.query(
-          `DELETE FROM hike_schema.hike_points WHERE id = $1 RETURNING order_number`,
-          [id]
+          `DELETE FROM hike_schema.hike_points WHERE id = $1 AND hike_id = $2 RETURNING order_number`,
+          [id, hike_id]
         );
 
         if (deleted.rows.length > 0) {
@@ -113,7 +120,6 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
       }
     }
 
-    const hike = await pool.query(`SELECT * FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
     const waypoints = await pool.query(
       `SELECT * FROM hike_schema.hike_points WHERE hike_id = $1 ORDER BY order_number ASC`,
       [hike_id]
@@ -121,28 +127,12 @@ mapboxRouter.put('/waypoints', async (req, res, next) => {
 
     res.status(200).json({
       message: 'Waypoint operations completed',
-      hike: hike.rows[0],
+      hike,
       waypoints: waypoints.rows
     });
   } catch (error) {
     console.error('DB Error:', error.message);
     next(new CustomError('Failed to process waypoint operations', 500));
-  }
-});
-
-
-mapboxRouter.get('/testing', async (req, res, next) => {
-  try {
-    const coordinates = req.body.coord1 + ';'+ req.body.coord2;
-    
-    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?access_token=${MAPBOX_TOKEN}&geometries=geojson&overview=full`;
-    
-    const response = await axios.get(url);
-    res.json(response.data);
-    
-  } catch (error) {
-    console.error('Mapbox Error:', error);
-    next(new CustomError('Failed to fetch from Mapbox', 500));
   }
 });
 
