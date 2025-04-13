@@ -2,7 +2,7 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-import pool from '../db.js';
+import pool from '../utils/db.js';
 
 //directions api https://api.mapbox.com/directions/v5/mapbox/walking/
 

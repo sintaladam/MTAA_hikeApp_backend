@@ -1,12 +1,48 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Friends
+ *   description: Friend management
+ */
+
+
 import { Router } from 'express';
 import { query, validationResult } from 'express-validator';
-import pool from '../db.js';
+import pool from '../utils/db.js';
 import pkg from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import CustomError from '../middleware/customError.js';
 
 const friendRouter = Router();
 
+
+/**
+ * @swagger
+ * /api/friends/requests:
+ *   get:
+ *     tags: [Friends]
+ *     summary: Get friendship requests for a user
+ *     parameters:
+ *       - in: query
+ *         name: user_id1
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID of the user
+ *     responses:
+ *       200:
+ *         description: A list of friendship requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       400:
+ *         description: Bad request (validation errors)
+ *       500:
+ *         description: Internal server error
+ */
 friendRouter.get('/requests', [
     //validation
     query('user_id1').exists().withMessage('user id is required')
@@ -37,6 +73,33 @@ friendRouter.get('/requests', [
 });
 
 
+/**
+ * @swagger
+ * /api/friends/send-request:
+ *   post:
+ *     tags: [Friends]
+ *     summary: Send a friend request
+ *     parameters:
+ *       - in: query
+ *         name: sender
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Sender user ID
+ *       - in: query
+ *         name: receiver
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Receiver user ID
+ *     responses:
+ *       200:
+ *         description: Friend request sent
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
 friendRouter.post('/send-request',[
     //validation
     query('sender')
@@ -68,6 +131,64 @@ friendRouter.post('/send-request',[
         console.error(err);
     }
 });
+
+/**
+ * @swagger
+ * /api/friends/resolve-request:
+ *   put:
+ *     summary: Resolve a friend request
+ *     description: Updates the friendship status between two users as either accepted or rejected.
+ *     tags:
+ *       - Friends
+ *     parameters:
+ *       - in: query
+ *         name: user_id1
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user who sent the friend request.
+ *       - in: query
+ *         name: user_id2
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user who received the friend request.
+ *       - in: query
+ *         name: accept
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           enum: [0, 1]
+ *         description: 1 to accept, 0 to reject the request.
+ *     responses:
+ *       200:
+ *         description: Friendship request resolved (accepted or rejected)
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *               example: user with id 2 accepted user with id 1
+ *       400:
+ *         description: Bad request, missing or invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                       param:
+ *                         type: string
+ *                       location:
+ *                         type: string
+ *       500:
+ *         description: Internal server error
+ */
 friendRouter.put('/resolve-request',[
     //validation
     query('user_id1').exists().withMessage('sender is required')
@@ -100,6 +221,64 @@ friendRouter.put('/resolve-request',[
     }
 });
 
+/**
+ * @swagger
+ * /api/friends/delete:
+ *   delete:
+ *     summary: Delete a friendship between two users
+ *     description: Deletes a friendship from the database only if its status is `accepted`.
+ *     tags:
+ *       - Friends
+ *     parameters:
+ *       - in: query
+ *         name: user_id1
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the first user (requesting deletion).
+ *       - in: query
+ *         name: user_id2
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the second user.
+ *     responses:
+ *       200:
+ *         description: Friendship deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Friendship deleted successfully
+ *                 count:
+ *                   type: integer
+ *                   example: 1
+ *       400:
+ *         description: Bad request, missing or invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                       param:
+ *                         type: string
+ *                       location:
+ *                         type: string
+ *       404:
+ *         description: No friendship found to delete
+ *       500:
+ *         description: Internal server error
+ */
 friendRouter.delete('/delete',[
     query('user_id1').exists().withMessage('sender is required')
     .trim()
@@ -131,10 +310,5 @@ friendRouter.delete('/delete',[
         res.status(500).send('Something went wrong');
     }
 })
-
-
-
-// friendRouter.update('/add', async (req,res) => {});
-// friendRouter.post('/add', async (req,res) => {});
 
 export default friendRouter;

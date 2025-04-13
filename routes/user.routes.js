@@ -1,5 +1,5 @@
 import { Router } from "express";
-import pool from '../db.js';
+import pool from '../utils/db.js';
 import CustomError from '../middleware/customError.js';
 import jwt from 'jsonwebtoken';
 

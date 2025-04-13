@@ -1,7 +1,7 @@
 import { Router } from "express";
-import pool from '../db.js';
+import pool from '../utils/db.js';
 import pkg from 'firebase-admin';
-import serviceAccount from '../firebase.js';
+import serviceAccount from '../utils/firebase.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
