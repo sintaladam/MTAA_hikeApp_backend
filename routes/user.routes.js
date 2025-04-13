@@ -5,6 +5,18 @@ import jwt from 'jsonwebtoken';
 
 const userRouter = Router();
 
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: A list of users
+ *       500:
+ *         description: Database query failed
+ */
 userRouter.get('/', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT * FROM users`);
@@ -15,6 +27,33 @@ userRouter.get('/', async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /users/search:
+ *   get:
+ *     summary: Search for a user by ID or email
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         description: User ID
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *         description: User email (partial match supported)
+ *     responses:
+ *       200:
+ *         description: User found
+ *       400:
+ *         description: Either ID or email must be provided
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Database query failed
+ */
 userRouter.get('/search', async (req, res, next) => {
   const { id, email } = req.query;
 

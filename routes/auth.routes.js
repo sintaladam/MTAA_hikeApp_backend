@@ -18,6 +18,50 @@ function generateToken(payload) {
   });
 }
 
+/**
+ * @swagger
+ * /signup:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *               nickname:
+ *                 type: string
+ *               profile_picture:
+ *                 type: string
+ *               surname:
+ *                 type: string
+ *               birth_date:
+ *                 type: string
+ *               region:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *       400:
+ *         description: Validation error
+ *       422:
+ *         description: Invalid email format
+ *       500:
+ *         description: Error creating user
+ */
 authRouter.post('/signup', async (req, res, next) => {
   const {
     name,
@@ -32,12 +76,10 @@ authRouter.post('/signup', async (req, res, next) => {
   } = req.body;
 
   try {
-    // basic validation example
     if (!email || !password) {
       throw new CustomError('Email and password are required', 400);
     }
 
-    // basic email format check thing i tried
     if (!email.includes('@') || !email.includes('.')) {
       throw new CustomError('Invalid email format', 422);
     }
@@ -66,7 +108,6 @@ authRouter.post('/signup', async (req, res, next) => {
     });
 
   } catch (error) {
-    // if it's already a custom error, just forward it
     if (error instanceof CustomError) {
       return next(error);
     }

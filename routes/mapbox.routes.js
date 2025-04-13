@@ -2,7 +2,7 @@ import { Router } from "express";
 import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
-import pool from '../db.js';
+import pool from '../utils/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 dotenv.config();
@@ -11,6 +11,27 @@ const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
 
 const mapboxRouter = Router();
 
+/**
+ * @swagger
+ * /mapbox/search:
+ *   get:
+ *     summary: Search location using Mapbox Geocoding API
+ *     tags: [Mapbox]
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Location text to search
+ *     responses:
+ *       200:
+ *         description: Search results from Mapbox
+ *       400:
+ *         description: Query parameter is required
+ *       500:
+ *         description: Failed to fetch from Mapbox
+ */
 mapboxRouter.get('/search', async (req, res, next) => {
   const { query } = req.query;
 
@@ -20,7 +41,6 @@ mapboxRouter.get('/search', async (req, res, next) => {
 
   try {
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}`;
-
     const response = await axios.get(url);
     res.json(response.data);
   } catch (error) {
@@ -29,6 +49,51 @@ mapboxRouter.get('/search', async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /mapbox/waypoints:
+ *   put:
+ *     summary: Update, insert, or delete waypoints for a specific hike
+ *     tags: [Mapbox]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hike_id:
+ *                 type: integer
+ *               updates:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [insert, update, delete]
+ *                     id:
+ *                       type: integer
+ *                     latitude:
+ *                       type: number
+ *                     longitude:
+ *                       type: number
+ *                     order_number:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Waypoint operations completed
+ *       400:
+ *         description: Invalid request payload
+ *       403:
+ *         description: Unauthorized access to hike
+ *       404:
+ *         description: Hike not found
+ *       500:
+ *         description: Failed to process waypoint operations
+ */
 mapboxRouter.put('/waypoints', authenticateToken, async (req, res, next) => {
   const { hike_id, updates } = req.body;
 
