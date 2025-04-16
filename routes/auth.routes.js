@@ -5,6 +5,7 @@ import serviceAccount from '../utils/firebase.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 const admin = pkg;
@@ -86,10 +87,11 @@ authRouter.post('/signup', async (req, res, next) => {
 
     const userRecord = await admin.auth().createUser({ email, password });
     const created_at = new Date().toISOString();
+    const hashedPasword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      'INSERT INTO user_schema.users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, role',
-      [name, role, nickname, profile_picture, email, surname, created_at, birth_date, region]
+      'INSERT INTO user_schema.users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region, password) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, email, role',
+      [name, role, nickname, profile_picture, email, surname, created_at, birth_date, region, hashedPasword]
     );
 
     const user = result.rows[0];
@@ -100,10 +102,17 @@ authRouter.post('/signup', async (req, res, next) => {
       role: user.role
     });
 
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '30d' }
+    );
+
     res.status(201).json({
       message: 'User created successfully',
       uid: userRecord.uid,
       token,
+      refreshToken,
       user
     });
 
@@ -116,5 +125,72 @@ authRouter.post('/signup', async (req, res, next) => {
     next(new CustomError('Error creating user', 500));
   }
 });
+
+authRouter.post('/signin', async (req, res, next) => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email || !password) {
+      throw new CustomError('Email and password required', 400);
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM user_schema.users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      throw new CustomError('User not found', 404);
+    }
+
+    const user = result.rows[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new CustomError('Incorrect password', 401);
+    }
+
+    const accessToken = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, {
+      expiresIn: '30d'
+    });
+
+    res.status(200).json({
+      message: 'Login successful',
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    next(err instanceof CustomError ? err : new CustomError('Signin failed', 500));
+  }
+});
+
+authRouter.post('/refresh', (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(401).json({ error: 'Refresh token missing' });
+
+  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid refresh token' });
+
+    const accessToken = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    res.json({ accessToken });
+  });
+});
+
 
 export default authRouter;

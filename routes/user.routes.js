@@ -2,6 +2,7 @@ import { Router } from "express";
 import pool from '../utils/db.js';
 import CustomError from '../middleware/customError.js';
 import jwt from 'jsonwebtoken';
+import { authenticateToken } from "../middleware/auth.js";
 
 const userRouter = Router();
 
@@ -19,7 +20,7 @@ const userRouter = Router();
  */
 userRouter.get('/', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT * FROM users`);
+    const result = await pool.query(`SELECT * FROM user_schema.users`);
     res.status(200).json({ title: "results:", body: result.rows });
   } catch (err) {
     console.error('DB query error:', err);
@@ -54,14 +55,14 @@ userRouter.get('/', async (req, res, next) => {
  *       500:
  *         description: Database query failed
  */
-userRouter.get('/search', async (req, res, next) => {
+userRouter.get('/search',authenticateToken, async (req, res, next) => {
   const { id, email } = req.query;
 
   if (!id && !email) {
     return next(new CustomError('Either ID or email must be provided', 400));
   }
 
-  let query = 'SELECT * FROM users WHERE ';
+  let query = 'SELECT * FROM user_schema.users WHERE ';
   let searchParam;
 
   if (id) {

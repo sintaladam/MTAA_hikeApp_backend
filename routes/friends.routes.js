@@ -12,6 +12,7 @@ import pool from '../utils/db.js';
 import pkg from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import CustomError from '../middleware/customError.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const friendRouter = Router();
 
@@ -43,7 +44,7 @@ const friendRouter = Router();
  *       500:
  *         description: Internal server error
  */
-friendRouter.get('/requests', [
+friendRouter.get('/requests', authenticateToken, [
     //validation
     query('user_id1').exists().withMessage('user id is required')
     .trim()
