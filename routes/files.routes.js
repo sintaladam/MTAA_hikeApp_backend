@@ -6,13 +6,11 @@ import CustomError from '../middleware/customError.js';
 
 const fileRouter = Router();
 
-// create upload directory if it doesn't exist
 const uploadDir = './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -25,7 +23,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// POST /api/files/profile-picture
 fileRouter.post('/profile-picture', upload.single('file'), (req, res, next) => {
   if (!req.file) return next(new CustomError('No file uploaded', 400));
 

@@ -172,16 +172,19 @@ mapboxRouter.put('/waypoints', authenticateToken, async (req, res, next) => {
           `DELETE FROM hike_schema.hike_points WHERE id = $1 AND hike_id = $2 RETURNING order_number`,
           [id, hike_id]
         );
-
-        if (deleted.rows.length > 0) {
-          const removedOrder = deleted.rows[0].order_number;
-
-          await pool.query(
-            `UPDATE hike_schema.hike_points SET order_number = order_number - 1
-             WHERE hike_id = $1 AND order_number > $2`,
-            [hike_id, removedOrder]
-          );
+        
+        if (deleted.rows.length === 0) {
+          return next(new CustomError(`Waypoint with id ${id} not found`, 404));
         }
+        
+        const removedOrder = deleted.rows[0].order_number;
+        
+        await pool.query(
+          `UPDATE hike_schema.hike_points SET order_number = order_number - 1
+           WHERE hike_id = $1 AND order_number > $2`,
+          [hike_id, removedOrder]
+        );
+        
       }
     }
 
