@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import CustomError from '../middleware/customError.js';
+import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 
 const fileRouter = Router();
 

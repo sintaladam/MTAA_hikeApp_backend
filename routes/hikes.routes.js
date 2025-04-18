@@ -4,7 +4,7 @@ import pkg from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 
 const hikeRouter = Router();
 
@@ -40,7 +40,7 @@ const hikeRouter = Router();
  *       500:
  *         description: Internal server error
  */
-hikeRouter.post('/add', authenticateToken, async (req, res, next) => {
+hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
   try {
     const { name, points } = req.body;
     const user_id = req.user.id;
@@ -83,7 +83,7 @@ hikeRouter.post('/add', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Internal server error
  */
-hikeRouter.get('/from-user', authenticateToken, async (req, res, next) => {
+hikeRouter.get('/from-user', authenticateFirebaseToken, async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -126,7 +126,7 @@ hikeRouter.get('/from-user', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Internal server error
  */
-hikeRouter.get('/from-user-detail', authenticateToken, async (req, res, next) => {
+hikeRouter.get('/from-user-detail', authenticateFirebaseToken, async (req, res, next) => {
   try {
     const hikeId = req.query.hikeId;
 

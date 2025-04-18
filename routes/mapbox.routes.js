@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import CustomError from '../middleware/customError.js';
 import pool from '../utils/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 
 dotenv.config();
 
@@ -94,7 +94,7 @@ mapboxRouter.get('/search', async (req, res, next) => {
  *       500:
  *         description: Failed to process waypoint operations
  */
-mapboxRouter.put('/waypoints', authenticateToken, async (req, res, next) => {
+mapboxRouter.put('/waypoints', authenticateFirebaseToken, async (req, res, next) => {
   const { hike_id, updates } = req.body;
 
   if (!hike_id || !Array.isArray(updates)) {

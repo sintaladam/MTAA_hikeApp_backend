@@ -2,7 +2,7 @@ import { Router } from "express";
 import pool from '../utils/db.js';
 import CustomError from '../middleware/customError.js';
 import jwt from 'jsonwebtoken';
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 
 const userRouter = Router();
 
@@ -55,7 +55,7 @@ userRouter.get('/', async (req, res, next) => {
  *       500:
  *         description: Database query failed
  */
-userRouter.get('/search',authenticateToken, async (req, res, next) => {
+userRouter.get('/search',authenticateFirebaseToken, async (req, res, next) => {
   const { id, email } = req.query;
 
   if (!id && !email) {

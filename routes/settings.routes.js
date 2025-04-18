@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../utils/db.js';
 import CustomError from '../middleware/customError.js';
+import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 
 const settingsRouter = Router();
 

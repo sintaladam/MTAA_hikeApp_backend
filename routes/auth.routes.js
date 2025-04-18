@@ -1,14 +1,14 @@
 import { Router } from "express";
 import pool from '../utils/db.js';
-import pkg from 'firebase-admin';
-import serviceAccount from '../utils/firebase.js';
+// import pkg from 'firebase-admin';
+import { admin } from '../utils/firebase.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
 import bcrypt from 'bcrypt';
 
 dotenv.config();
-const admin = pkg;
+// const admin = pkg;
 
 const authRouter = Router();
 
