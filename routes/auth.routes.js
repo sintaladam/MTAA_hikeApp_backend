@@ -67,7 +67,6 @@ authRouter.post('/signup', async (req, res, next) => {
   const {
     name,
     email,
-    password,
     role,
     nickname,
     profile_picture,
@@ -75,44 +74,48 @@ authRouter.post('/signup', async (req, res, next) => {
     birth_date,
     region
   } = req.body;
-
+  const authHeader = req.headers.authorization;
+  const idToken = authHeader.split(' ')[1]; // Extract the token
+  console.log(idToken);
+  console.log(email)
   try {
-    if (!email || !password) {
-      throw new CustomError('Email and password are required', 400);
+    if (!email || !idToken) {
+      throw new CustomError('Email and ID token are required', 400);
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      throw new CustomError('Invalid email format', 422);
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    console.log(decodedToken.email);
+    if (decodedToken.email?.trim().toLowerCase() !== email.trim().toLowerCase()) {
+      throw new CustomError('Email does not match token', 403);
     }
 
-    const userRecord = await admin.auth().createUser({ email, password });
+    // Check if user already exists in your DB (optional)
+    const existingUser = await pool.query(
+      'SELECT id FROM user_schema.users WHERE email = $1',
+      [email]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(200).json({
+        message: 'User already exists in the local database',
+        user: existingUser.rows[0]
+      });
+    }
+
     const created_at = new Date().toISOString();
-    const hashedPasword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      'INSERT INTO user_schema.users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region, password) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, email, role',
-      [name, role, nickname, profile_picture, email, surname, created_at, birth_date, region, hashedPasword]
+      'INSERT INTO user_schema.users (name, role, nickname, profile_picture, email, surname, created_at, birth_date, region) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, role',
+      [name, role, nickname, profile_picture, email, surname, created_at, birth_date, region]
     );
 
     const user = result.rows[0];
 
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-
-    const refreshToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: '30d' }
-    );
-
     res.status(201).json({
-      message: 'User created successfully',
-      uid: userRecord.uid,
-      token,
-      refreshToken,
+      message: 'User created in local DB successfully',
+      uid: decodedToken.uid,
+      token: decodedToken,
       user
     });
 
