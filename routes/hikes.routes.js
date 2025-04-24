@@ -46,21 +46,13 @@ hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
     const user_id = req.user.id;
     const created_at = new Date().toISOString();    
 
+    const lineString = `LINESTRING(${points.map(p => `${p.longitude} ${p.latitude}`).join(', ')})`;
+
     const query_hikes = await pool.query(`
-        INSERT INTO hike_schema.hikes (name, created_at, user_id)
-        VALUES ($1, $2, $3)
+        INSERT INTO hike_schema.hikes (name, created_at, user_id, geom)
+        VALUES ($1, $2, $3, ST_GeomFromText($4, 4326))
         RETURNING id
-    `, [name, created_at, user_id]);
-
-    const id_from_hikes = query_hikes.rows[0].id;
-
-    for (let i = 0; i < points.length; i++) {
-      await pool.query(`
-          INSERT INTO hike_schema.hike_points 
-          (hike_id, order_number, latitude, longitude, created_at)
-          VALUES ($1, $2, $3, $4, $5)
-      `, [id_from_hikes, i, points[i].latitude, points[i].longitude, created_at]);
-    }
+    `, [name, created_at, user_id, lineString]);
 
     res.status(200).json({ response: name, user_id });
   } catch (err) {
@@ -86,9 +78,8 @@ hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
 hikeRouter.get('/from-user', authenticateFirebaseToken, async (req, res, next) => {
   try {
     const userId = req.user.id;
-
     const query = await pool.query(`
-        SELECT hike.id, hike.name, hike.created_at, hike.user_id, creator.nickname 
+        SELECT hike.id, hike.name, hike.created_at, hike.user_id, creator.nickname
         FROM hike_schema.hikes hike 
         JOIN user_schema.users creator 
         ON hike.user_id = creator.id
