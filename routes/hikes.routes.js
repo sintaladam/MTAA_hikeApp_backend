@@ -42,22 +42,39 @@ const hikeRouter = Router();
  */
 hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
   try {
-    const { name, points } = req.body;
+    const { name } = req.body;
     const user_id = req.user.id;
-    const created_at = new Date().toISOString();    
-
-    const lineString = `LINESTRING(${points.map(p => `${p.longitude} ${p.latitude}`).join(', ')})`;
+    const created_at = new Date().toISOString();
 
     const query_hikes = await pool.query(`
-        INSERT INTO hike_schema.hikes (name, created_at, user_id, geom)
-        VALUES ($1, $2, $3, ST_GeomFromText($4, 4326))
-        RETURNING id
-    `, [name, created_at, user_id, lineString]);
+      INSERT INTO hike_schema.hikes (name, created_at, user_id)
+      VALUES ($1, $2, $3)
+      RETURNING id
+    `, [name, created_at, user_id]);
 
-    res.status(200).json({ response: name, user_id });
+    const hikeId = query_hikes.rows[0].id;
+
+    res.status(200).json({ hikeId, name, user_id });
   } catch (err) {
     console.error(err);
-    next(new CustomError('Internal server error', 500));    
+    next(new CustomError('Internal server error', 500));
+  }
+});
+
+hikeRouter.delete('/delete', authenticateFirebaseToken, async (req, res, next) => {
+  const { hike_id } = req.query;
+  try {
+    const hike = await pool.query(`SELECT * FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
+    if (hike.rowCount === 0) return res.status(404).json({ error: 'Hike not found' });
+    if (hike.rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    await pool.query(`DELETE FROM hike_schema.hike_points WHERE hike_id = $1`, [hike_id]);
+    await pool.query(`DELETE FROM hike_schema.hikes WHERE id = $1`, [hike_id]);
+
+    res.status(200).json({ message: 'Hike deleted' });
+  } catch (err) {
+    console.error(err);
+    next(new CustomError('Internal server error', 500));
   }
 });
 

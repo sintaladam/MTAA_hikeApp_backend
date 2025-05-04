@@ -7,6 +7,6 @@
     "database": {"ENV": "DB_NAME"},
     "port": {"ENV": "DB_PORT"},
     "migrations-dir": "migrations",
-    "sql-file-path": "sqls"
+    "sql-file-path": "migrations/sqls"
   }
 }
