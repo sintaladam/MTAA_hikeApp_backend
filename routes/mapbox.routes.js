@@ -113,11 +113,12 @@ mapboxRouter.put('/waypoints', authenticateFirebaseToken, async (req, res, next)
     }
 
     for (const item of updates) {
-      const { type, id, latitude, longitude, order_number } = item;
+      const { type, id, latitude, longitude, order_number, name = '' } = item;
       const created_at = new Date().toISOString();
 
       if (type === 'insert') {
         if (latitude == null || longitude == null || order_number == null) continue;
+
 
         await pool.query(
           `UPDATE hike_schema.hike_points SET order_number = order_number + 1 
@@ -126,9 +127,9 @@ mapboxRouter.put('/waypoints', authenticateFirebaseToken, async (req, res, next)
         );
 
         await pool.query(
-          `INSERT INTO hike_schema.hike_points (hike_id, order_number, latitude, longitude, created_at)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [hike_id, order_number, latitude, longitude, created_at]
+          `INSERT INTO hike_schema.hike_points (hike_id, order_number, geom, created_at, name)
+           VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5, $6)`,
+          [hike_id, order_number, longitude, latitude, created_at, name]
         );
 
       } else if (type === 'update') {
@@ -160,9 +161,9 @@ mapboxRouter.put('/waypoints', authenticateFirebaseToken, async (req, res, next)
 
         await pool.query(
           `UPDATE hike_schema.hike_points
-           SET latitude = $1, longitude = $2, order_number = $3
+           SET geom = ST_SetSRID(ST_MakePoint($1, $2), 4326), order_number = $3
            WHERE id = $4 AND hike_id = $5`,
-          [latitude, longitude, order_number, id, hike_id]
+          [longitude, latitude, order_number, id, hike_id]
         );
 
       } else if (type === 'delete') {
@@ -190,6 +191,18 @@ mapboxRouter.put('/waypoints', authenticateFirebaseToken, async (req, res, next)
 
     const waypoints = await pool.query(
       `SELECT * FROM hike_schema.hike_points WHERE hike_id = $1 ORDER BY order_number ASC`,
+      [hike_id]
+    );
+
+    // update hike geom after inserting waypoints
+    await pool.query(
+      `UPDATE hike_schema.hikes
+       SET geom = (
+         SELECT ST_MakeLine(geom ORDER BY order_number)
+         FROM hike_schema.hike_points
+         WHERE hike_id = $1
+       )
+       WHERE id = $1`,
       [hike_id]
     );
 
