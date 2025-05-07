@@ -6,7 +6,7 @@
   "experimentalImportJson": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate:create": "db-migrate create waypoint_changes -e dev --sql-file -config ./utils/database.json --verbose",
+    "migrate:create": "db-migrate create better_constraint -e dev --sql-file -config ./database.json --verbose",
     "migrate:up": "db-migrate up -e dev -config ./utils/database.json --verbose",
     "migrate:down": "db-migrate down -e dev -config ./utils/database.json",
     "migrate:status": "db-migrate status"
