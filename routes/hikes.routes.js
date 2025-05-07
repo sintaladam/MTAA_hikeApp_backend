@@ -42,48 +42,24 @@ const hikeRouter = Router();
  */
 hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
   try {
-    let { name } = req.body;
+    const { name } = req.body;
     const user_id = req.user.id;
     const created_at = new Date().toISOString();
 
-    // Check for existing hikes with similar names
-    const existing = await pool.query(
-      `SELECT name FROM hike_schema.hikes WHERE name ILIKE $1 || '%' ORDER BY name`,
-      [name]
-    );
+    const query_hikes = await pool.query(`
+      INSERT INTO hike_schema.hikes (name, created_at, user_id)
+      VALUES ($1, $2, $3)
+      RETURNING id
+    `, [name, created_at, user_id]);
 
-    if (existing.rows.length > 0) {
-      let maxSuffix = 1;
+    const hikeId = query_hikes.rows[0].id;
 
-      existing.rows.forEach(row => {
-        const match = row.name.match(/\((\d+)\)$/);
-        if (match) {
-          const num = parseInt(match[1]);
-          if (!isNaN(num)) maxSuffix = Math.max(maxSuffix, num + 1);
-        } else if (row.name === name) {
-          maxSuffix = Math.max(maxSuffix, 2); // Base name exists
-        }
-      });
-
-      name = `${name} (${maxSuffix})`;
-    }
-
-    const insertRes = await pool.query(
-      `INSERT INTO hike_schema.hikes (name, created_at, user_id)
-       VALUES ($1, $2, $3)
-       RETURNING id`,
-      [name, created_at, user_id]
-    );
-
-    
-
-    res.status(200).json({ hikeId: insertRes.rows[0].id, name, user_id });
+    res.status(200).json({ hikeId, name, user_id });
   } catch (err) {
     console.error(err);
     next(new CustomError('Internal server error', 500));
   }
 });
-
 
 hikeRouter.delete('/delete', authenticateFirebaseToken, async (req, res, next) => {
   const { hike_id } = req.query;
