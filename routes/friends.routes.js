@@ -312,4 +312,38 @@ friendRouter.delete('/delete',[
     }
 })
 
+friendRouter.get('/list', authenticateFirebaseToken, [
+    query('user_id1')
+      .exists().withMessage('user_id1 is required')
+      .isInt().withMessage('must be an integer'),
+  ], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  
+    const { user_id1 } = req.query;
+  
+    try {
+      const result = await pool.query(
+        `
+        SELECT u.id, u.name, u.profile_picture
+        FROM user_schema.friendships f
+        JOIN user_schema.users u
+          ON (u.id = f.user1_id AND f.user2_id = $1)
+          OR (u.id = f.user2_id AND f.user1_id = $1)
+        WHERE f.status = 'accepted'
+          AND (f.user1_id = $1 OR f.user2_id = $1)
+        `,
+        [user_id1]
+      );
+  
+      res.status(200).json(result.rows);
+    } catch (err) {
+      console.error('Failed to fetch friends list:', err);
+      res.status(500).send('Internal server error');
+    }
+  });
+  
+
 export default friendRouter;
