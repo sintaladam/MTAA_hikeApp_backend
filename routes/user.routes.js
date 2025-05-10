@@ -3,6 +3,7 @@ import pool from '../utils/db.js';
 import CustomError from '../middleware/customError.js';
 import jwt from 'jsonwebtoken';
 import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
+import { query, validationResult } from 'express-validator';
 
 const userRouter = Router();
 
@@ -84,6 +85,40 @@ userRouter.get('/search',authenticateFirebaseToken, async (req, res, next) => {
     next(new CustomError('Database query failed', 500));
   }
 });
+
+
+userRouter.get('/smart-search', authenticateFirebaseToken, [
+  query('term')
+    .exists().withMessage('search term is required')
+    .trim()
+    .notEmpty().withMessage('search term cannot be empty')
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { term, excludeId } = req.query;
+  const searchTerm = `%${term}%`;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, nickname, name, surname, email, profile_picture
+       FROM user_schema.users
+       WHERE (LOWER(name) ILIKE LOWER($1)
+          OR LOWER(surname) ILIKE LOWER($1)
+          OR LOWER(nickname) ILIKE LOWER($1))
+         AND id::text != $2`,
+      [searchTerm, excludeId || '']
+    );
+
+    res.status(200).json({ users: result.rows });
+  } catch (err) {
+    console.error('Error during smart search:', err);
+    next(new CustomError('Failed to perform search', 500));
+  }
+});
+
 
 /**
  * @swagger

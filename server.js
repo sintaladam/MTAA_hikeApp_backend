@@ -13,7 +13,7 @@ import errorHandler from './middleware/errorHandler.js';
 import settingsRouter from './routes/settings.routes.js';
 import friendRouter from './routes/friends.routes.js';
 import fileRouter from './routes/files.routes.js';
-
+import { syncFirebaseUsersOnce } from './utils/syncFirebaseUsers.js';
 import swaggerDocs from './utils/swagger.js';
 
 const PORT = process.env.SERVER_PORT;
@@ -42,4 +42,5 @@ swaggerDocs(app,PORT);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  syncFirebaseUsersOnce();
 });
