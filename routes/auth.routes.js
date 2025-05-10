@@ -195,5 +195,27 @@ authRouter.post('/refresh', (req, res) => {
   });
 });
 
+authRouter.post('/custom-token', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new CustomError('Missing or invalid Authorization header', 401);
+    }
+
+    const idToken = authHeader.split(' ')[1];
+    const decoded = await admin.auth().verifyIdToken(idToken);
+
+    // Optional: You can log or restrict access here based on claims or role
+    console.log('Generating custom token for UID:', decoded.uid);
+
+    const customToken = await admin.auth().createCustomToken(decoded.uid);
+
+    res.status(200).json({ customToken });
+  } catch (err) {
+    console.error('Error creating custom token:', err);
+    next(new CustomError('Failed to create custom token', 500));
+  }
+});
+
 
 export default authRouter;
