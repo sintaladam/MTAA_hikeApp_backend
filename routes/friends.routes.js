@@ -327,7 +327,7 @@ friendRouter.get('/list', authenticateFirebaseToken, [
     try {
       const result = await pool.query(
         `
-        SELECT u.id, u.name, u.profile_picture
+        SELECT u.id, u.name, u.profile_picture, u.email
         FROM user_schema.friendships f
         JOIN user_schema.users u
           ON (u.id = f.user1_id AND f.user2_id = $1)
