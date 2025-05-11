@@ -5,8 +5,16 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
 import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
+import polyline from '@mapbox/polyline';
+
 
 const hikeRouter = Router();
+
+function polylineToWKT(polylineStr) {
+  const coordinates = polyline.decode(polylineStr); // [[lat, lng], ...]
+  const lngLatPairs = coordinates.map(([lat, lng]) => `${lng} ${lat}`);
+  return `LINESTRING(${lngLatPairs.join(', ')})`;
+}
 
 /**
  * @swagger
@@ -42,18 +50,31 @@ const hikeRouter = Router();
  */
 hikeRouter.post('/add', authenticateFirebaseToken, async (req, res, next) => {
   try {
-    const { name } = req.body;
-    const user_id = req.user.id;
+    const { name, userEmail, start_point, dest_point, distance, calories, geom } = req.body;
     const created_at = new Date().toISOString();
+    console.log(req.body);
+    console.log(userEmail)
 
+    const result = await pool.query(`
+      SELECT u.id 
+      FROM user_schema.users u 
+      WHERE u.email = $1
+      `,[userEmail]);
+    const user_id = result.rows[0]?.id;
+    if (!user_id) throw new Error("User not found");
+    console.log(result.rows)
+    // Decode polyline to WKT
+    const geomWKT = polylineToWKT(geom); // → 'LINESTRING(...)'
+
+    console.log("WKT:", geomWKT);
+    // Insert hike with geometry
     const query_hikes = await pool.query(`
-      INSERT INTO hike_schema.hikes (name, created_at, user_id)
-      VALUES ($1, $2, $3)
+      INSERT INTO hike_schema.hikes (name, created_at, user_id, start_point, dest_point, distance, calories, geom)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, ST_GeomFromText($8, 4326))
       RETURNING id
-    `, [name, created_at, user_id]);
+    `, [name, created_at, user_id, start_point, dest_point, distance, calories, geomWKT]);
 
     const hikeId = query_hikes.rows[0].id;
-
     res.status(200).json({ hikeId, name, user_id });
   } catch (err) {
     console.error(err);
