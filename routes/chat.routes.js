@@ -1,5 +1,6 @@
 import express from 'express';
 import { admin, db } from '../utils/firebase.js';
+import { sendPushNotification } from '../utils/sendPush.js';
 
 const router = express.Router();
 
@@ -35,7 +36,6 @@ router.get('/stream/:chatId', (req, res) => {
 router.post('/send', async (req, res) => {
   const { chatId, text, sender } = req.body;
 
-  // ✅ log inputs
   console.log('Received message:', { chatId, text, sender });
 
   if (!chatId || typeof chatId !== 'string') {
@@ -43,25 +43,57 @@ router.post('/send', async (req, res) => {
   }
 
   try {
+    // create and store the message
     const message = {
       text,
       sender,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    await db
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .add(message);
+    await db.collection('chats').doc(chatId).collection('messages').add(message);
 
-    await db
-      .collection('chats')
-      .doc(chatId)
-      .update({
-        lastMessage: text,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    await db.collection('chats').doc(chatId).update({
+      lastMessage: text,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 🔔 try to send a push notification
+    const chatDoc = await db.collection('chats').doc(chatId).get();
+    const users = chatDoc.data()?.users;
+
+    if (!Array.isArray(users) || users.length !== 2) {
+      console.warn('Invalid users array in chat doc');
+      return res.status(200).json({ success: true });
+    }
+
+    const receiverUid = users.find(uid => uid !== sender);
+    if (!receiverUid) {
+      console.warn('Receiver UID not found');
+      return res.status(200).json({ success: true });
+    }
+
+    const userSnapshot = await db.collection('users').doc(receiverUid).get();
+    const receiverEmail = userSnapshot.data()?.email;
+
+    if (!receiverEmail) {
+      console.warn('Receiver email not found');
+      return res.status(200).json({ success: true });
+    }
+
+    // lookup push token in Postgres
+    const result = await pool.query(
+      'SELECT push_token FROM hike_schema.users WHERE email = $1',
+      [receiverEmail]
+    );
+
+    const pushToken = result.rows[0]?.push_token;
+    if (!pushToken) {
+      console.warn(`No push token found for ${receiverEmail}`);
+      return res.status(200).json({ success: true });
+    }
+
+    // send push
+    await sendPushNotification(pushToken, 'New message', text);
 
     res.status(200).json({ success: true });
   } catch (e) {
