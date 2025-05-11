@@ -7,4 +7,4 @@ ALTER TABLE hike_schema.hikes
 ADD CONSTRAINT unique_user_hike_name UNIQUE (name, user_id);
 --change hike column from int to float
 ALTER TABLE hike_schema.hikes
-ALTER COLUMN column_name TYPE float USING column_name::float;
+ALTER COLUMN distance TYPE float USING distance::float;
