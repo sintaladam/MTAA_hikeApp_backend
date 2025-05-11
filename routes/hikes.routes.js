@@ -110,6 +110,27 @@ hikeRouter.get('/from-user', authenticateFirebaseToken, async (req, res, next) =
   }
 });
 
+hikeRouter.put('/update', authenticateFirebaseToken, async (req, res, next) => {
+  try {
+    const hikeId = req.query.hikeId;
+    const {name,start_point,dest_point,distance,calories} = req.body;
+    const query = await pool.query(`
+        UPDATE hike_schema.hikes
+        SET name = $1,
+            start_point = $2,
+            dest_point = $3,
+            distance = $4,
+            calories = $5,
+            geom = geom
+        WHERE id = $6;
+    `, [name,start_point,dest_point,distance,calories,hikeId]);
+    res.status(200).json({message: 'good',response: query.rows});
+  } catch (err) {
+    console.error(err);
+    next(new CustomError('Internal server error', 500));    
+  }
+});
+
 /**
  * @swagger
  * /hikes/from-user-detail:
