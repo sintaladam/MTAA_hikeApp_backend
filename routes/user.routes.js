@@ -206,34 +206,15 @@ userRouter.get('/:userId', authenticateFirebaseToken, async (req, res, next) => 
 
 // POST /api/users/push-token
 userRouter.post('/push-token', async (req, res, next) => {
-  const { uid, token } = req.body;
+  const { email, token } = req.body;
 
-  if (!uid || !token) {
-    return res.status(400).json({ error: 'Missing uid or token' });
+  if (!email || !token) {
+    return res.status(400).json({ error: 'Missing email or token' });
   }
 
   try {
-    // Get the email for the Firebase UID
-    const snapshot = await db
-      .collection('users')
-      .where('__name__', '==', uid)
-      .limit(1)
-      .get();
-
-    if (snapshot.empty) {
-      return res.status(404).json({ error: 'Firebase user not found' });
-    }
-
-    const firebaseUser = snapshot.docs[0].data();
-    const email = firebaseUser.email;
-
-    if (!email) {
-      return res.status(500).json({ error: 'Email not found for user' });
-    }
-
-    // Update PostgreSQL push_token for that email
     const result = await pool.query(
-      `UPDATE hike_schema.users
+      `UPDATE user_schema.users
        SET push_token = $1
        WHERE email = $2
        RETURNING id, email, push_token`,
@@ -246,10 +227,11 @@ userRouter.post('/push-token', async (req, res, next) => {
 
     res.status(200).json({ message: 'Push token saved', user: result.rows[0] });
   } catch (err) {
-    console.error('Error saving push token:', err);
+    console.error('❌ Error saving push token:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 
 export default userRouter;

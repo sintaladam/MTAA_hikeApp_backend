@@ -1,6 +1,7 @@
 import express from 'express';
 import { admin, db } from '../utils/firebase.js';
 import { sendPushNotification } from '../utils/sendPush.js';
+import pool from '../utils/db.js';
 
 const router = express.Router();
 
@@ -82,7 +83,7 @@ router.post('/send', async (req, res) => {
 
     // lookup push token in Postgres
     const result = await pool.query(
-      'SELECT push_token FROM hike_schema.users WHERE email = $1',
+      'SELECT push_token FROM user_schema.users WHERE email = $1',
       [receiverEmail]
     );
 
