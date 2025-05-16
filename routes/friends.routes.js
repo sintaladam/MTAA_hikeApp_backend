@@ -73,7 +73,27 @@ friendRouter.get('/requests', authenticateFirebaseToken, [
 
 });
 
-
+friendRouter.post('/join-hike', async (req,res) => {
+    
+    try {
+        const {hike_id,user_id} = req.body;
+        console.log(req.body)
+        const created_at = new Date().toISOString();    
+        const query = await pool.query(`
+            INSERT INTO hike_schema.hike_participants 
+            (hike_id, user_id, joined_at)
+            VALUES ($1,$2,$3);
+            `,[hike_id,user_id, created_at])
+        res.status(200).json(query.rows)
+    }catch (err){
+        if (err.code === '23505') {
+        // PostgreSQL error code 23505 = unique_violation
+            res.status(409).json({ error: 'User already joined this hike.' });
+        } else {
+            res.status(500).json({ error: err.detail || 'Server error' });
+        }
+    }
+});
 /**
  * @swagger
  * /api/friends/send-request:

@@ -1,3 +1,6 @@
+ALTER TABLE hike_schema.hike_participants
+DROP CONSTRAINT unique_hike_participant;
+
 ALTER TABLE hike_schema.hikes
 ALTER COLUMN column_name TYPE int USING column_name::int;
 -- Remove composite constraint

@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import CustomError from '../middleware/customError.js';
 import { authenticateFirebaseToken } from '../middleware/firebaseAuth.js';
 import polyline from '@mapbox/polyline';
-
+import { Geometry } from 'wkx';
 
 const hikeRouter = Router();
 
@@ -181,7 +181,7 @@ hikeRouter.get('/from-user-detail', authenticateFirebaseToken, async (req, res, 
     const hikeId = req.query.hikeId;
 
     const query = await pool.query(
-      `SELECT * FROM hike_schema.hikes WHERE id = $1`,
+      `SELECT *, ST_AsBinary(geom) AS geom_bin FROM hike_schema.hikes WHERE id = $1`,
       [hikeId]
     );
 
@@ -194,6 +194,11 @@ hikeRouter.get('/from-user-detail', authenticateFirebaseToken, async (req, res, 
     if (hike.user_id !== req.user.id) {
       return next(new CustomError('Unauthorized access to this hike', 403));
     }
+
+    const geojson = Geometry.parse(hike.geom_bin).toGeoJSON();
+
+    hike.geom = geojson;
+    delete hike.geom_bin;
 
     res.status(200).json(hike);
   } catch (err) {
